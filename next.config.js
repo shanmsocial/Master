@@ -5,6 +5,23 @@
 await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+     images: {
+        remotePatterns: [
+            {
+                protocol: "https",
+                hostname: "emailer.thyrocare.com",
+                port: "",
+                pathname: "/**",
+            },
+            {
+                protocol: "https",
+                hostname: "b2capi.thyrocare.com",
+                port: "",
+                pathname: "/**",
+            }
+        ]
+     }
+};
 
 export default config;
