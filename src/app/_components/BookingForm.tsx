@@ -81,30 +81,26 @@ export default function BookingForm() {
     const [isValidating, setIsValidating] = useState(false);
     const [isBeneficiariesOpen, setIsBeneficiariesOpen] = useState(false);
     const { toast } = useToast();
-  
+
     const validatePincode = async (pincode: string) => {
       if (pincode.length !== 6 || !/^\d+$/.test(pincode)) {
         setIsPincodeValid(false);
         return;
       }
-  
       setIsValidating(true);
       try {
-        const response = await fetch('https://velso.thyrocare.cloud/api/TechsoApi/PincodeAvailability', {
+        const response = await fetch('/api/validate-pincode', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            "ApiKey": "jsQrVXJ7kKbydxhyDk1pOmVha91)MqEx.1pIsaxiiqkI=",
-            "Pincode": pincode
-          })
+          body: JSON.stringify({ pincode })
         });
-  
+    
         const data = await response.json();
         const isValid = data && data.status === "Y"; 
         setIsPincodeValid(isValid);
-  
+    
         if (!isValid) {
           toast({
             title: "Invalid Pincode",
