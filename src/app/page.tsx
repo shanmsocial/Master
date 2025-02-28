@@ -1,6 +1,8 @@
 import React from 'react';
 import BookingForm from './_components/BookingForm';
 import Image from 'next/image';
+import PreventiveHealthSection from './_components/PreventiveHealthSection';
+import WellnessPackagesComparison from './_components/WellnessPackagesComparison';
 
 export default function HomePage() {
   return (
@@ -64,6 +66,8 @@ export default function HomePage() {
 
         </div>
       </div>
+      <WellnessPackagesComparison />
+      <PreventiveHealthSection />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { cn } from "~/lib/utils";
 import { useToast } from "~/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 import BeneficiariesPopup from "./BeneficiariesPopup";
+import { useRouter } from 'next/navigation';
 
 interface Beneficiary {
   id?: string;
@@ -98,6 +99,7 @@ export default function BookingForm() {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const validatePincode = async (pincode: string) => {
     if (pincode.length !== 6 || !/^\d+$/.test(pincode)) {
@@ -140,12 +142,16 @@ export default function BookingForm() {
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setFormState(prev => ({ ...prev, pincode: value }));
 
-    if (value.length === 6) {
-      validatePincode(value);
-    } else if (value.length > 0) {
-      setIsPincodeValid(null);
+    // Only allow digits and max 6 characters
+    if (/^\d{0,6}$/.test(value)) {
+      setFormState(prev => ({ ...prev, pincode: value }));
+
+      if (value.length === 6) {
+        validatePincode(value);
+      } else if (value.length > 0) {
+        setIsPincodeValid(null);
+      }
     }
   };
 
@@ -174,7 +180,7 @@ export default function BookingForm() {
 
   const validateAddress = (address: string): string | undefined => {
     if (!address.trim()) return "Address is required";
-    if (address.trim().length < 15) return "Address should be at least 15 characters";
+    if (address.trim().length < 25) return "Address should be at least 25 characters";
     return undefined;
   };
 
@@ -193,7 +199,16 @@ export default function BookingForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormState(prev => ({ ...prev, [name]: value }));
+
+    // Special handling for mobile field
+    if (name === 'mobile') {
+      // Only allow digits and max 10 characters for mobile
+      if (/^\d{0,10}$/.test(value)) {
+        setFormState(prev => ({ ...prev, [name]: value }));
+      }
+    } else {
+      setFormState(prev => ({ ...prev, [name]: value }));
+    }
 
     // Clear error when typing
     if (formErrors[name as keyof FormErrors]) {
@@ -339,21 +354,28 @@ export default function BookingForm() {
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       const packageCode = getPackageCode();
 
-      // Prepare patients array
-      const patients = formState.beneficiaries.map((ben, index) => ({
-        Id: index + 1,
-        Name: ben.name,
-        Age: parseInt(ben.age),
-        Gender: ben.gender.charAt(0).toUpperCase()
-      }));
+      // Prepare patients array, always starting with the main person
+      const patients = [{
+        Id: 1,
+        Name: formState.name,
+        Age: parseInt(formState.age || "0"),
+        Gender: formState.gender.charAt(0).toUpperCase()
+      }];
 
-      // If no beneficiaries added yet, use the main person's info
-      if (patients.length === 0) {
-        patients.push({
-          Id: 1,
-          Name: formState.name,
-          Age: parseInt(formState.age || "0"),
-          Gender: formState.gender.charAt(0).toUpperCase()
+      // Add additional beneficiaries if any
+      if (formState.beneficiaries.length > 0) {
+        formState.beneficiaries.forEach((ben, index) => {
+          // Skip if this is duplicating the main person
+          if (ben.name === formState.name && ben.age === formState.age && ben.gender === formState.gender) {
+            return;
+          }
+
+          patients.push({
+            Id: index + 2, // Start from 2 since the main person is Id 1
+            Name: ben.name,
+            Age: parseInt(ben.age),
+            Gender: ben.gender.charAt(0).toUpperCase()
+          });
         });
       }
 
@@ -423,7 +445,7 @@ export default function BookingForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate all fields
@@ -447,20 +469,169 @@ export default function BookingForm() {
       return;
     }
 
-    if (parseInt(formState.quantity) > 0 && formState.beneficiaries.length !== parseInt(formState.quantity)) {
+    // Check if we have enough beneficiaries (minus the main person who's always included)
+    // So if quantity is 3, we need 2 additional beneficiaries (plus the main person)
+    if (parseInt(formState.quantity) > 1 && formState.beneficiaries.length < parseInt(formState.quantity) - 1) {
       toast({
         title: "Incomplete Information",
-        description: `Please add all ${formState.quantity} beneficiaries before submitting.`,
+        description: `Please add all ${parseInt(formState.quantity) - 1} additional beneficiaries before submitting.`,
         variant: "destructive",
       });
       return;
     }
 
-    console.log("Form submitted:", formState);
-    toast({
-      title: "Booking Submitted",
-      description: "Your test booking has been received.",
-    });
+    // Format date for API
+    const formattedDate = formState.appointmentDate ?
+      `${format(formState.appointmentDate, "yyyy-MM-dd")} ${formState.slot.split(' - ')[0]}` : "";
+
+    // Get product code from package
+    const packageCode = getPackageCode();
+
+    // Format beneficiaries data, always including the main person first
+    const benData = [{
+      name: formState.name,
+      age: formState.age,
+      gender: formState.gender.charAt(0).toUpperCase() + formState.gender.slice(1)
+    }];
+
+    // Then add any additional beneficiaries 
+    if (formState.beneficiaries.length > 0) {
+      // Filter out any beneficiary that might be duplicating the main person
+      // (in case the main person was also added as first beneficiary)
+      const additionalBeneficiaries = formState.beneficiaries.filter(ben =>
+        !(ben.name === formState.name && ben.age === formState.age && ben.gender === formState.gender)
+      );
+
+      // Add the additional beneficiaries to the benData array
+      additionalBeneficiaries.forEach(ben => {
+        benData.push({
+          name: ben.name,
+          age: ben.age,
+          gender: ben.gender.charAt(0).toUpperCase() + ben.gender.slice(1)
+        });
+      });
+    }
+
+    try {
+      // Generate a unique reference order ID
+      const refOrderId = `ORD${Date.now()}`;
+
+      // Create order payload
+      const orderPayload = {
+        "api_key": "Md1oSsrtb7Qhav2L09Vz4D8uDiFKCK6L.EiWtce3cMB@64p2utjY0AA==",
+        "ref_order_id": refOrderId,
+        "email": formState.email,
+        "mobile": formState.mobile,
+        "address": formState.address,
+        "appt_date": formattedDate,
+        "order_by": formState.name,
+        "passon": 0,
+        "pay_type": "POSTPAID",
+        "pincode": formState.pincode,
+        "products": "PROJ1024559",
+        // "products": packageCode,
+        "ref_code": "8122206688",
+        "remarks": `${formState.package.split('~')[0]} booking`,
+        "reports": formState.printedReports ? "Y" : "N",
+        "service_type": "HOME",
+        "ben_data": benData,
+        "coupon": "",
+        "order_mode": "DSA-BOOKING-API",
+        "collection_type": "",
+        "source": "THYROCARELANDINGPAGE"
+      };
+
+
+      // Show loading state
+      toast({
+        title: "Processing",
+        description: "Your booking is being processed...",
+      });
+
+      // Submit the order
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload)
+      });
+
+      const data = await response.json();
+
+      if (data.response_status === 1) {
+        toast({
+          title: "Booking Successful",
+          description: "Your test booking has been confirmed.",
+        });
+
+        const orderId = data.order_no || "";
+
+        // Fetch order summary data to log to Google Sheets
+        try {
+          const summaryResponse = await fetch('/api/order-summary', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ orderId })
+          });
+
+          const summaryData = await summaryResponse.json();
+
+          if (summaryData) {
+            // Extract the data we want to log
+            const orderDetails = summaryData.orderMaster[0];
+            const beneficiary = summaryData.benMaster[0];
+            const preferredDate = summaryData.leadHistoryMaster[0]?.appointOn[0]?.date || 'Not scheduled';
+            const orderDate = summaryData.leadHistoryMaster[0]?.bookedOn[0]?.date?.split(' ')[0] || '';
+
+            // Log the order data to Google Sheets
+            await fetch('/api/log-to-sheets', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                orderNo: orderDetails?.orderNo,
+                orderDate: orderDate,
+                paymentMode: orderDetails?.payType,
+                preferredDateTime: preferredDate,
+                rate: orderDetails?.rate,
+                beneficiaryName: beneficiary?.name,
+                testDetails: orderDetails?.products,
+                mobileNumber: beneficiary?.mobile,
+                emailAddress: orderDetails?.email,
+                address: orderDetails?.address,
+                timestamp: new Date().toISOString()
+              })
+            });
+
+            console.log("Order logged to Google Sheets");
+          }
+        } catch (error) {
+          console.error("Error logging to Google Sheets:", error);
+          // Continue with redirect even if logging fails
+        }
+        router.push(`/order-summary?orderId=${orderId}`);
+
+        // Reset form or redirect to success page
+        // setFormState(initialFormState);
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: data.message || "Failed to create your booking. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong while processing your booking. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -594,7 +765,7 @@ export default function BookingForm() {
 
             <div className="mb-3 relative">
               <Textarea
-                placeholder="Address (at least 15 characters)*"
+                placeholder="Address (at least 25 characters)*"
                 className={cn(
                   "min-h-[60px] text-sm resize-none",
                   formErrors.address ? "border-red-500" : ""
@@ -699,7 +870,7 @@ export default function BookingForm() {
                 </SelectTrigger>
                 <SelectContent>
                   {availableSlots.map((slot) => (
-                    <SelectItem key={slot.id} value={slot.id}>{slot.slot}</SelectItem>
+                    <SelectItem key={slot.id} value={slot.slot}>{slot.slot}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
