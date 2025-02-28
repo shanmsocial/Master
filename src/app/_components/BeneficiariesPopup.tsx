@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { X } from "lucide-react";
+import { X } from 'lucide-react';
 
 interface Beneficiary {
   id?: string;
@@ -40,27 +40,18 @@ export default function BeneficiariesPopup({
   quantity,
   initialBeneficiaries = [] 
 }: BeneficiariesPopupProps) {
-  // Initialize with either passed beneficiaries or at least one empty entry
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(
-    initialBeneficiaries.length > 0 
-      ? initialBeneficiaries 
-      : [{ id: '1', name: '', gender: '', age: '' }]
-  );
-  
-  // Current index for input fields
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(initialBeneficiaries);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
   const [age, setAge] = useState('');
 
-  // Reset beneficiaries if quantity changes
   useEffect(() => {
     if (beneficiaries.length > quantity) {
       setBeneficiaries(beneficiaries.slice(0, quantity));
     }
   }, [quantity]);
 
-  // Update current fields when index changes
   useEffect(() => {
     if (beneficiaries[currentIndex]) {
       setName(beneficiaries[currentIndex]?.name ?? '');
@@ -73,7 +64,6 @@ export default function BeneficiariesPopup({
     }
   }, [currentIndex, beneficiaries]);
 
-  // Update beneficiary data when fields change
   useEffect(() => {
     if (beneficiaries[currentIndex]) {
       const updatedBeneficiaries = [...beneficiaries];
@@ -96,10 +86,10 @@ export default function BeneficiariesPopup({
     }
   };
 
-  const removeBeneficiary = () => {
+  const removeBeneficiary = (index: number) => {
     if (beneficiaries.length > 1) {
       const newBeneficiaries = [...beneficiaries];
-      newBeneficiaries.splice(currentIndex, 1);
+      newBeneficiaries.splice(index, 1);
       setBeneficiaries(newBeneficiaries);
       setCurrentIndex(Math.min(currentIndex, newBeneficiaries.length - 1));
     }
@@ -113,18 +103,31 @@ export default function BeneficiariesPopup({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white rounded-none sm:rounded-md">
-        <DialogHeader className="px-6 py-2 border-b">
-          <DialogTitle className="text-center text-base font-medium">Add Beneficiaries</DialogTitle>
-          <Button 
-            className="absolute right-3 top-3 h-6 w-6 p-0 rounded-full" 
-            variant="ghost"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle className="text-center text-lg font-semibold">Add Beneficiaries</DialogTitle>
         </DialogHeader>
         
         <div className="p-6 space-y-4">
+          {/* List of added beneficiaries */}
+          <div className="space-y-2">
+            {beneficiaries.map((beneficiary, index) => (
+              <div key={beneficiary.id} className="flex justify-between items-center p-2 border rounded-md">
+                <div>
+                  <p className="font-medium">{beneficiary.name}</p>
+                  <p className="text-sm text-gray-500">{beneficiary.gender}, {beneficiary.age} years</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="p-2"
+                  onClick={() => removeBeneficiary(index)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
           {/* Current beneficiary input fields */}
           <div className="space-y-4">
             <Input
@@ -174,7 +177,7 @@ export default function BeneficiariesPopup({
               type="button"
               variant="secondary"
               className="bg-blue-200 hover:bg-blue-300 text-blue-700 rounded-md h-10 w-10 p-0 flex items-center justify-center"
-              onClick={removeBeneficiary}
+              onClick={() => removeBeneficiary(currentIndex)}
               disabled={beneficiaries.length <= 1}
             >
               -
