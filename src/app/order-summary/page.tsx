@@ -14,7 +14,6 @@ function LoadingState(){
       );
 }
 
-
 export default function OrderSummaryRoute() {
   return ( 
     <Suspense fallback={<LoadingState />}>
