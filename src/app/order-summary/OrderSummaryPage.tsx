@@ -99,17 +99,14 @@ export default function OrderSummaryPage() {
       }
 
       try {
-        const response = await fetch('https://velso.thyrocare.cloud/api/OrderSummary/OrderSummary', {
+        const response = await fetch('/api/order-summary', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            "ApiKey": "Md1oSsrtb7Qhav2L09Vz4D8uDiFKCK6L.EiWtce3cMB@64p2utjY0AA==",
-            "OrderNo": orderId
-          })
+          body: JSON.stringify({orderId})
         });
-
+        console.log("response", response);
         if (!response.ok) {
           throw new Error('Failed to fetch order summary');
         }
