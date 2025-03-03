@@ -13,7 +13,8 @@ export const env = createEnv({
       .default("development"),
     SUPABASE_PROJECT_URL: z.string().url(),
     SUPABASE_KEY: z.string(),
-    SUPABASE_DATABASE_URL: z.string().url()
+    SUPABASE_DATABASE_URL: z.string().url(),
+    API_KEY: z.string().min(1),
   },
 
   /**
@@ -34,7 +35,8 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     SUPABASE_PROJECT_URL: process.env.SUPABASE_PROJECT_URL,
     SUPABASE_KEY: process.env.SUPABASE_KEY,
-    SUPABASE_DATABASE_URL: process.env.SUPABASE_DATABASE_URL
+    SUPABASE_DATABASE_URL: process.env.SUPABASE_DATABASE_URL,
+    API_KEY: process.env.API_KEY,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

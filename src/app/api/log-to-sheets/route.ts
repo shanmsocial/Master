@@ -5,28 +5,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Google Sheets API endpoint
-    // You'll need to create a Google Apps Script Web App that acts as a proxy
-    // and publishes the submitted data to your Google Sheet
     const GOOGLE_SHEETS_API_URL = process.env.GOOGLE_SHEETS_API_URL;
     
     if (!GOOGLE_SHEETS_API_URL) {
       throw new Error('Google Sheets API URL not configured');
     }
     
-    // The data we want to log to Google Sheets
-    const { 
-      orderNo,
-      orderDate,
-      paymentMode,
-      preferredDateTime,
-      rate,
-      beneficiaryName,
-      testDetails,
-      mobileNumber,
-      emailAddress,
-      address,
-      timestamp 
-    } = body;
+    // Determine which sheet to use
+    const sheetName = body.sheetName || "Orders";
+    
+    // Prepare the payload based on the sheet type
+    let payload;
+    
+    if (sheetName === "FailedOrders") {
+      payload = {
+        sheetName: "FailedOrders",
+        timestamp: body.timestamp,
+        orderDate: body.orderDate,
+        paymentMode: body.paymentMode,
+        preferredDateTime: body.preferredDateTime,
+        beneficiaryName: body.beneficiaryName,
+        testDetails: body.testDetails,
+        mobileNumber: body.mobileNumber,
+        emailAddress: body.emailAddress,
+        address: body.address,
+        pincode: body.pincode,
+        errorMessage: body.errorMessage
+      };
+    } else {
+      // Default for Orders sheet
+      payload = {
+        sheetName: "Orders",
+        timestamp: body.timestamp,
+        orderNo: body.orderNo,
+        orderDate: body.orderDate,
+        paymentMode: body.paymentMode,
+        preferredDateTime: body.preferredDateTime,
+        rate: body.rate,
+        beneficiaryName: body.beneficiaryName,
+        testDetails: body.testDetails,
+        mobileNumber: body.mobileNumber,
+        emailAddress: body.emailAddress,
+        address: body.address
+      };
+    }
     
     // Send the data to Google Sheets through the Apps Script Web App
     const response = await fetch(GOOGLE_SHEETS_API_URL, {
@@ -34,19 +56,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        orderNo,
-        orderDate,
-        paymentMode,
-        preferredDateTime,
-        rate,
-        beneficiaryName,
-        testDetails,
-        mobileNumber, 
-        emailAddress,
-        address,
-        timestamp
-      })
+      body: JSON.stringify(payload)
     });
     
     const data = await response.json();
@@ -56,7 +66,7 @@ export async function POST(request: NextRequest) {
     console.error('Error logging to Google Sheets:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to log order to Google Sheets' 
+      error: 'Failed to log data to Google Sheets' 
     }, { status: 500 });
   }
 }

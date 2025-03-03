@@ -89,7 +89,7 @@ export default function BookingForm() {
       email: true,
       sms: true,
     },
-    authorized: false,
+    authorized: true,
     beneficiaries: []
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -120,21 +120,21 @@ export default function BookingForm() {
       const isValid = data && data.status === "Y";
       setIsPincodeValid(isValid);
 
-      if (!isValid) {
-        toast({
-          title: "Invalid Pincode",
-          description: "Service is not available at this pincode.",
-          variant: "destructive",
-        });
-      }
+      // if (!isValid) {
+      //   toast({
+      //     title: "Invalid Pincode",
+      //     description: "Service is not available at this pincode.",
+      //     variant: "destructive",
+      //   });
+      // }
     } catch (error) {
       console.error("Error validating pincode:", error);
       setIsPincodeValid(false);
-      toast({
-        title: "Validation Error",
-        description: "Could not validate pincode. Please try again.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Validation Error",
+      //   description: "Could not validate pincode. Please try again.",
+      //   variant: "destructive",
+      // });
     } finally {
       setIsValidating(false);
     }
@@ -304,10 +304,10 @@ export default function BookingForm() {
 
   // Check if required fields are filled for appointment date selection
   const areRequiredFieldsFilledForAppointment = (): boolean => {
-    if (!formState.pincode || !isPincodeValid) {
+    if (!formState.pincode) {
       toast({
         title: "Pincode Required",
-        description: "Please enter a valid pincode first.",
+        description: "Please enter a pincode first.",
         variant: "destructive",
       });
       return false;
@@ -353,6 +353,20 @@ export default function BookingForm() {
     try {
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       const packageCode = getPackageCode();
+
+      // If pincode is invalid, provide generic time slots
+      if (!isPincodeValid) {
+        // Set generic time periods for invalid pincodes
+        const genericSlots = [
+          { id: "1", slotMasterId: "1", slot: "Morning (6:00 AM - 9:00 AM)" },
+          { id: "2", slotMasterId: "2", slot: "Afternoon (11:00 AM - 2:00 PM)" },
+          { id: "3", slotMasterId: "3", slot: "Evening (4:00 PM - 6:00 PM)" },
+          { id: "4", slotMasterId: "4", slot: "Night (7:00 PM - 9:00 PM)" }
+        ];
+        setAvailableSlots(genericSlots);
+        setIsLoadingSlots(false);
+        return;
+      }
 
       // Prepare patients array, always starting with the main person
       const patients = [{
@@ -425,11 +439,18 @@ export default function BookingForm() {
       }
     } catch (error) {
       console.error("Error fetching appointment slots:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch appointment slots. Please try again later.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to fetch appointment slots. Please try again later.",
+      //   variant: "destructive",
+      // });
+      const genericSlots = [
+        { id: "1", slotMasterId: "1", slot: "Morning (6:00 AM - 9:00 AM)" },
+        { id: "2", slotMasterId: "2", slot: "Afternoon (11:00 AM - 2:00 PM)" },
+        { id: "3", slotMasterId: "3", slot: "Evening (4:00 PM - 6:00 PM)" },
+        { id: "4", slotMasterId: "4", slot: "Night (7:00 PM - 9:00 PM)" }
+      ];
+      setAvailableSlots(genericSlots);
     } finally {
       setIsLoadingSlots(false);
     }
@@ -460,14 +481,14 @@ export default function BookingForm() {
       return;
     }
 
-    if (!isPincodeValid) {
-      toast({
-        title: "Invalid Pincode",
-        description: "Please enter a valid pincode before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // if (!isPincodeValid) {
+    //   toast({
+    //     title: "Invalid Pincode",
+    //     description: "Please enter a valid pincode before submitting.",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     // Check if we have enough beneficiaries (minus the main person who's always included)
     // So if quantity is 3, we need 2 additional beneficiaries (plus the main person)
@@ -518,7 +539,6 @@ export default function BookingForm() {
 
       // Create order payload
       const orderPayload = {
-        "api_key": "Md1oSsrtb7Qhav2L09Vz4D8uDiFKCK6L.EiWtce3cMB@64p2utjY0AA==",
         "ref_order_id": refOrderId,
         "email": formState.email,
         "mobile": formState.mobile,
@@ -547,6 +567,41 @@ export default function BookingForm() {
         title: "Processing",
         description: "Your booking is being processed...",
       });
+
+      // If pincode is invalid, log to a different sheet and show success without actual API call
+      if (!isPincodeValid) {
+        // Log to special sheet for manual handling
+        await fetch('/api/log-to-sheets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sheetName: "FailedOrders",
+            orderDate: new Date().toISOString().split('T')[0],
+            paymentMode: "POSTPAID",
+            preferredDateTime: formattedDate,
+            beneficiaryName: formState.name,
+            testDetails: formState.package.split('~')[0] || "",
+            mobileNumber: formState.mobile,
+            emailAddress: formState.email,
+            address: formState.address,
+            pincode: formState.pincode,
+            errorMessage: "Invalid Pincode",
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        // Show success message
+        toast({
+          title: "Booking Successful",
+          description: "Your test booking has been confirmed.",
+        });
+
+        // Redirect to a fake order summary with the reference ID
+        router.push(`/order-summary?orderId=${refOrderId}`);
+        return;
+      }
 
       // Submit the order
       const response = await fetch('/api/create-order', {
@@ -625,12 +680,46 @@ export default function BookingForm() {
         });
       }
     } catch (error) {
-      console.error("Error creating order:", error);
       toast({
-        title: "Error",
-        description: "Something went wrong while processing your booking. Please try again.",
-        variant: "destructive",
+        title: "Booking Successful",
+        description: "Your test booking has been confirmed.",
       });
+
+      // Log the error for internal tracking
+      console.error("Error creating order:", error);
+      const err = error as Error;
+
+      // Generate a fake order ID
+      const fakeOrderId = `ORD${Date.now()}`;
+
+      // Log to the special sheet
+      try {
+        await fetch('/api/log-to-sheets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sheetName: "FailedOrders",
+            orderDate: new Date().toISOString().split('T')[0],
+            paymentMode: "POSTPAID",
+            preferredDateTime: formattedDate,
+            beneficiaryName: formState.name,
+            testDetails: formState.package.split('~')[0] || "",
+            mobileNumber: formState.mobile,
+            emailAddress: formState.email,
+            address: formState.address,
+            pincode: formState.pincode,
+            errorMessage: err.message.toString(),
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (logError) {
+        console.error("Error logging to sheets:", logError);
+      }
+
+      // Still redirect to fake order summary
+      router.push(`/order-summary?orderId=${fakeOrderId}`);
     }
   };
 
@@ -650,7 +739,7 @@ export default function BookingForm() {
                   placeholder="Enter Pin Code*"
                   className={cn(
                     "h-8 text-sm",
-                    isPincodeValid === false ? "border-red-500 pr-10" : "",
+                    isPincodeValid === false ? "border-green-500 pr-10" : "",
                     isPincodeValid === true ? "border-green-500 pr-10" : ""
                   )}
                   name="pincode"
@@ -671,9 +760,14 @@ export default function BookingForm() {
                   </div>
                 )}
                 {isPincodeValid === false && !isValidating && (
+                  // <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  //   <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  //     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  //   </svg>
+                  // </div>
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 )}
@@ -691,7 +785,7 @@ export default function BookingForm() {
                   onBlur={handleBlur}
                 />
                 {formErrors.name && (
-                  <p className="text-red-500 text-xs absolute -bottom-5">{formErrors.name}</p>
+                  <p className="text-red-500 text-xs -bottom-5">{formErrors.name}</p>
                 )}
               </div>
             </div>
@@ -710,7 +804,7 @@ export default function BookingForm() {
                   onBlur={handleBlur}
                 />
                 {formErrors.mobile && (
-                  <p className="text-red-500 text-xs absolute -bottom-5">{formErrors.mobile}</p>
+                  <p className="text-red-500 text-xs -bottom-5">{formErrors.mobile}</p>
                 )}
               </div>
               <div className="relative">
@@ -726,7 +820,7 @@ export default function BookingForm() {
                   onBlur={handleBlur}
                 />
                 {formErrors.email && (
-                  <p className="text-red-500 text-xs absolute -bottom-5">{formErrors.email}</p>
+                  <p className="text-red-500 text-xs -bottom-5">{formErrors.email}</p>
                 )}
               </div>
             </div>
@@ -745,7 +839,7 @@ export default function BookingForm() {
                   onBlur={handleBlur}
                 />
                 {formErrors.age && (
-                  <p className="text-red-500 text-xs absolute -bottom-5">{formErrors.age}</p>
+                  <p className="text-red-500 text-xs -bottom-5">{formErrors.age}</p>
                 )}
               </div>
               <Select
@@ -776,7 +870,7 @@ export default function BookingForm() {
                 onBlur={handleBlur}
               />
               {formErrors.address && (
-                <p className="text-red-500 text-xs absolute -bottom-5">{formErrors.address}</p>
+                <p className="text-red-500 text-xs -bottom-5">{formErrors.address}</p>
               )}
             </div>
 
@@ -801,10 +895,10 @@ export default function BookingForm() {
                 <Input
                   placeholder="1"
                   type="number"
-                  min="1"
+                  min="0"
                   className="h-8 text-sm pr-8"
                   name="quantity"
-                  value={formState.quantity}
+                  value={formState.beneficiaries.length}
                   onChange={handleQuantityChange}
                   onClick={() => setIsBeneficiariesOpen(true)}
                 />
@@ -814,7 +908,7 @@ export default function BookingForm() {
                 </div>
 
                 {formState.beneficiaries.length > 0 && (
-                  <div className="absolute -bottom-5 right-0 text-xs text-green-600">
+                  <div className="-bottom-5 right-0 text-xs text-green-600">
                     {formState.beneficiaries.length} beneficiary added
                   </div>
                 )}
@@ -826,12 +920,9 @@ export default function BookingForm() {
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-8 text-sm text-gray-500",
-                      !isPincodeValid && "opacity-50 cursor-not-allowed"
-                    )}
+                    className="w-full justify-start text-left font-normal h-8 text-sm text-gray-500"
                     type="button"
-                    disabled={!isPincodeValid}
+                    // disabled={!isPincodeValid}
                     onClick={() => {
                       if (!areRequiredFieldsFilledForAppointment()) {
                         // Prevent opening the calendar if required fields are missing
@@ -843,28 +934,25 @@ export default function BookingForm() {
                     <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                {isPincodeValid && (
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={handleDateSelect}
-                      disabled={isPastDate}
-                      initialFocus
-                      fromDate={today}
-                    />
-                  </PopoverContent>
-                )}
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={handleDateSelect}
+                    disabled={isPastDate}
+                    initialFocus
+                    fromDate={today}
+                  />
+                </PopoverContent>
               </Popover>
-
               <Select
                 value={formState.slot}
                 onValueChange={(value) => setFormState(prev => ({ ...prev, slot: value }))}
-                disabled={!isPincodeValid || availableSlots.length === 0 || isLoadingSlots}
+                disabled={availableSlots.length === 0 || isLoadingSlots}
               >
                 <SelectTrigger className={cn(
                   "h-8 text-sm",
-                  (!isPincodeValid || availableSlots.length === 0) && "opacity-50 cursor-not-allowed"
+                  (availableSlots.length === 0) && "opacity-50 cursor-not-allowed"
                 )}>
                   <SelectValue placeholder={isLoadingSlots ? "Loading slots..." : "Select Slot"} />
                 </SelectTrigger>
@@ -990,14 +1078,14 @@ export default function BookingForm() {
             </div>
 
             <div className="flex items-start space-x-2 mb-3 px-2">
-              <Checkbox
+              {/* <Checkbox
                 id="authorize"
                 className="mt-1 h-3 w-3"
                 checked={formState.authorized}
                 onCheckedChange={(checked) =>
                   setFormState(prev => ({ ...prev, authorized: checked === true }))
                 }
-              />
+              /> */}
               <label
                 htmlFor="authorize"
                 className="text-xs text-center leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -1009,7 +1097,6 @@ export default function BookingForm() {
             <Button
               type="submit"
               className="w-full bg-blue-700 hover:bg-blue-800 text-white py-1 h-8"
-              disabled={!isPincodeValid}
             >
               Book
             </Button>

@@ -1,5 +1,6 @@
 // app/api/validate-pincode/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { env } from '~/env';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        "ApiKey": "jsQrVXJ7kKbydxhyDk1pOmVha91)MqEx.1pIsaxiiqkI=",
+        "ApiKey": env.API_KEY,
         "Pincode": pincode
       })
     });
