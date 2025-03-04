@@ -15,6 +15,13 @@ export const env = createEnv({
     SUPABASE_KEY: z.string(),
     SUPABASE_DATABASE_URL: z.string().url(),
     API_KEY: z.string().min(1),
+    EMAIL_HOST: z.string().min(1),
+    EMAIL_PORT: z.string().min(1),
+    EMAIL_SECURE: z.string().min(1),
+    EMAIL_USER: z.string().min(1),
+    EMAIL_PASSWORD: z.string().min(1),
+    EMAIL_FROM: z.string().min(1),
+    EMAIL_TO: z.string().min(1),
   },
 
   /**
@@ -37,6 +44,13 @@ export const env = createEnv({
     SUPABASE_KEY: process.env.SUPABASE_KEY,
     SUPABASE_DATABASE_URL: process.env.SUPABASE_DATABASE_URL,
     API_KEY: process.env.API_KEY,
+    EMAIL_HOST: process.env.EMAIL_HOST,
+    EMAIL_PORT: process.env.EMAIL_PORT,
+    EMAIL_SECURE: process.env.EMAIL_SECURE,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_TO: process.env.EMAIL_TO,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

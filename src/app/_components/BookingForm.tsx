@@ -592,6 +592,24 @@ export default function BookingForm() {
           })
         });
 
+        await fetch('/api/send-error-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subject: "Booking Form Error",
+            errorMessage: "Invalid Pincode",
+            orderDetails: {
+              name: formState.name,
+              email: formState.email,
+              mobile: formState.mobile,
+              package: formState.package.split('~')[0] || "",
+              pincode: formState.pincode,
+            }
+          })
+        });
+
         // Show success message
         toast({
           title: "Booking Successful",
@@ -712,6 +730,25 @@ export default function BookingForm() {
             pincode: formState.pincode,
             errorMessage: err.message.toString(),
             timestamp: new Date().toISOString()
+          })
+        });
+
+
+        await fetch('/api/send-error-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subject: "Booking Form Error",
+            errorMessage: err.message.toString(),
+            orderDetails: {
+              name: formState.name,
+              email: formState.email,
+              mobile: formState.mobile,
+              package: formState.package.split('~')[0] || "",
+              pincode: formState.pincode,
+            }
           })
         });
       } catch (logError) {
