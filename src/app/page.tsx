@@ -14,9 +14,11 @@ export default function HomePage() {
       <OfferPopup />
       <ExitIntentPopup />
 
-      <ContactBanner />
+      <div className="sticky top-0 z-50 w-full">
+        <ContactBanner />
+      </div>
       {/* Header */}
-      <header className="w-full border-b">
+      <header className="sticky top-8 z-40 w-full border-b bg-white">
         <div className="container flex justify-between items-center py-2">
           <div className="flex items-center">
             <div className="flex flex-col">

@@ -206,7 +206,13 @@ export default function BookingForm() {
       if (/^\d{0,10}$/.test(value)) {
         setFormState(prev => ({ ...prev, [name]: value }));
       }
-    } else {
+    }
+    else if (name === 'age') {
+      if (/^\d{0,3}$/.test(value)) {
+        setFormState(prev => ({ ...prev, [name]: value }));
+      }
+    }
+    else {
       setFormState(prev => ({ ...prev, [name]: value }));
     }
 
@@ -931,12 +937,10 @@ export default function BookingForm() {
               <div className="relative">
                 <Input
                   placeholder="1"
-                  type="number"
-                  min="0"
-                  className="h-8 text-sm pr-8"
+                  readOnly
+                  className="h-8 text-sm pr-8 cursor-pointer"
                   name="quantity"
-                  value={formState.beneficiaries.length}
-                  onChange={handleQuantityChange}
+                  value={formState.beneficiaries.length + 1} // +1 to include main user
                   onClick={() => setIsBeneficiariesOpen(true)}
                 />
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
@@ -946,7 +950,7 @@ export default function BookingForm() {
 
                 {formState.beneficiaries.length > 0 && (
                   <div className="-bottom-5 right-0 text-xs text-green-600">
-                    {formState.beneficiaries.length} beneficiary added
+                    {formState.beneficiaries.length + 1} beneficiaries added
                   </div>
                 )}
               </div>
