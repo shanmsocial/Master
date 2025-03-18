@@ -3,21 +3,30 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+    console.log("body", body);
+
     // Google Sheets API endpoint
     const GOOGLE_SHEETS_API_URL = process.env.GOOGLE_SHEETS_API_URL;
-    
+
     if (!GOOGLE_SHEETS_API_URL) {
       throw new Error('Google Sheets API URL not configured');
     }
-    
+
     // Determine which sheet to use
     const sheetName = body.sheetName || "Orders";
-    
+
     // Prepare the payload based on the sheet type
     let payload;
-    
-    if (sheetName === "FailedOrders") {
+
+    if (sheetName === "PhoneNumbers") {
+      // New case for phone numbers
+      payload = {
+        sheetName: "PhoneNumbers",
+        timestamp: body.timestamp,
+        phoneNumber: body.phoneNumber,
+        source: body.source || "ExitIntentPopup"
+      };
+    } else if (sheetName === "FailedOrders") {
       payload = {
         sheetName: "FailedOrders",
         timestamp: body.timestamp,
@@ -49,7 +58,9 @@ export async function POST(request: NextRequest) {
         address: body.address
       };
     }
-    
+
+    console.log("payload", payload);
+
     // Send the data to Google Sheets through the Apps Script Web App
     const response = await fetch(GOOGLE_SHEETS_API_URL, {
       method: 'POST',
@@ -58,15 +69,15 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(payload)
     });
-    
+
     const data = await response.json();
-    
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Error logging to Google Sheets:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to log data to Google Sheets' 
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to log data to Google Sheets'
     }, { status: 500 });
   }
 }

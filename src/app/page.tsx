@@ -6,6 +6,7 @@ import WellnessPackagesComparison from './_components/WellnessPackagesComparison
 import ContactBanner from './_components/ContactBanner';
 import ExitIntentPopup from './_components/ExitIntentPopup';
 import OfferPopup from './_components/OfferPopup';
+import WhatsAppFloatButton from './_components/WhatsAppFloatButton';
 
 export default function HomePage() {
   return (
@@ -13,6 +14,7 @@ export default function HomePage() {
       {/* Popups */}
       <OfferPopup />
       <ExitIntentPopup />
+      <WhatsAppFloatButton />
 
       <div className="sticky top-0 z-50 w-full">
         <ContactBanner />
