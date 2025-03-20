@@ -31,6 +31,9 @@ export default function RootLayout({
         </Script>
       </head>
       <body>
+      <Analytics />
+      <SpeedInsights />
+
         {/* Google Tag Manager - noscript */}
         <noscript>
           <iframe
