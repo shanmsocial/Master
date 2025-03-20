@@ -2,6 +2,8 @@ import "~/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { Toaster } from "~/components/ui/toaster";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata = {
   title: "Thyrocare | Diagnostic & Preventive Health Care Industry in India",
